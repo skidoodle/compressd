@@ -112,6 +112,8 @@ jobs:
           copy compressd.exe dist\
           copy "$env:VIPS_DIR\bin\*.dll" dist\
 
+          (Get-Content compressd.iss) -replace 'AppVersion=1.0.0', "AppVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" | Set-Content compressd.iss
+
           7z a compressd-windows-amd64.zip .\dist\*
 
           & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" compressd.iss
