@@ -1,0 +1,48 @@
+COMPRESSD
+=========
+
+DESCRIPTION
+A simple tool I built to help me deal with massive piles of images
+taking up way too much space. It scans through your folders, finds your images,
+and converts them into modern formats like WebP or AVIF.
+
+It's designed to be fast without being a resource hog. It tracks what it's
+already processed so it doesn't waste time doing the same work twice, and it
+tries to use as much of your CPU as it can to get the job done quickly.
+
+INSTALLATION
+============
+
+The easiest way to get started is to grab a prebuilt version from the GitHub Releases page.
+
+Windows
+-------
+You can download the `compressd-setup.exe` installer for a standard installation, or grab the `compressd-windows-amd64.zip` if you just want the executable and its dependencies in a folder.
+
+Linux
+-----
+You can use the one-liner to install it quickly:
+
+$ curl -sSL https://raw.githubusercontent.com/skidoodle/compressd/main/install.sh | sh
+
+Or just download the `compressd-linux-amd64.tar.gz` from the releases page.
+
+Build from source
+-----------------
+If you've got Go and `libvips` installed on your system, you can just run:
+
+$ go install github.com/skidoodle/compressd@latest
+
+USAGE
+==========================
+
+$ compressd [OPTIONS] <TARGET_DIRECTORY>
+
+STANDARD FLAGS
+-j, --jobs <int>      Limits concurrent processing tasks. Defaults strictly
+                        to runtime.NumCPU().
+-f, --format <string> Target execution format: webp, avif (default: webp).
+-q, --quality <int>   Compression factor. Value range: [1-100] (default: 75).
+-c, --cache <string>  Absolute path targeting Pebble state index persistence
+                        (default: $HOME/.cache/compressd).
+-v, --verbose         Toggles verbose diagnostic text output layers.

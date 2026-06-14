@@ -1,0 +1,144 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install libvips
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips-dev patchelf
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.4"
+          cache: true
+
+      - name: Build
+        run: |
+          export CGO_ENABLED=1
+          go build -v -ldflags="-s -w" -o compressd .
+          chmod +x bundle_linux.sh
+          ./bundle_linux.sh compressd
+          tar -czvf compressd-linux-amd64.tar.gz compressd lib/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-binary
+          path: compressd-linux-amd64.tar.gz
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install libvips and Build Tools
+        shell: powershell
+        run: |
+          $retryCount = 0
+          $success = $false
+          do {
+              try {
+                  choco install pkgconfiglite --no-progress -y
+                  $success = $true
+              } catch {
+                  $retryCount++
+                  if ($retryCount -lt 3) {
+                      Start-Sleep -Seconds 10
+                  } else {
+                      throw "Chocolatey failed permanently."
+                  }
+              }
+          } while (-not $success)
+
+          echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          $vipsVersion = "8.18.3"
+          $url = "https://github.com/libvips/build-win64-mxe/releases/download/v$vipsVersion/vips-dev-x64-all-$vipsVersion.zip"
+          Invoke-WebRequest -Uri $url -OutFile "vips.zip"
+          Expand-Archive -Path "vips.zip" -DestinationPath "C:\vips"
+
+          $vipsPath = "C:\vips\vips-dev-8.18"
+          $unixPath = "C:/vips/vips-dev-8.18"
+
+          Get-ChildItem -Path "$vipsPath\lib\pkgconfig" -Filter "*.pc" | ForEach-Object {
+              $content = Get-Content $_.FullName
+              $content = $content | Where-Object { $_ -notmatch '^(Libs\.private|Requires\.private):' }
+              $content = $content -replace '-lintl\b', ''
+              $content = $content -replace '^prefix=.*', "prefix=$unixPath"
+              $content | Set-Content $_.FullName -Encoding Ascii
+          }
+
+          echo "VIPS_DIR=$vipsPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "VIPS_UNIX=$unixPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.4"
+          cache: true
+
+      - name: Build and Pack
+        shell: pwsh
+        env:
+          CGO_ENABLED: "1"
+          PKG_CONFIG_ALLOW_CROSS: "1"
+        run: |
+          $env:PKG_CONFIG_PATH = "$env:VIPS_UNIX/lib/pkgconfig"
+          $env:CGO_CFLAGS = "-I$env:VIPS_UNIX/include"
+          $env:CGO_LDFLAGS = "-L$env:VIPS_UNIX/lib"
+
+          go build -v -ldflags="-s -w" -o compressd.exe .
+          if (!(Test-Path "compressd.exe")) {
+            throw "compressd.exe not found after build"
+          }
+
+          mkdir dist
+
+          copy compressd.exe dist\
+          copy "$env:VIPS_DIR\bin\*.dll" dist\
+
+          7z a compressd-windows-amd64.zip .\dist\*
+
+          & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" compressd.iss
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-binary
+          path: |
+            compressd-windows-amd64.zip
+            compressd-setup.exe
+  release:
+    name: Create Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            artifacts/compressd-linux-amd64.tar.gz
+            artifacts/compressd-windows-amd64.zip
+            artifacts/compressd-setup.exe
+          generate_release_notes: true
