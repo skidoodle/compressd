@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	_ "github.com/skidoodle/compressd/engine/env"
+
 	"github.com/skidoodle/compressd/cache"
 	"github.com/skidoodle/compressd/engine"
 	"github.com/skidoodle/compressd/logger"

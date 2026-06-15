@@ -37,8 +37,7 @@ int vips_has_saver(const char *name) {
         vips_type_find("VipsForeignSave", "heifsave") != 0) {
       return 1;
     }
-    const char *saver = vips_foreign_find_save("test.avif");
-    return saver != NULL;
+    return vips_foreign_find_save("test.avif") != NULL;
   }
   if (strcmp(name, "webp") == 0) {
     if (vips_type_find("VipsForeignSave", "webpsave") != 0) {
@@ -48,4 +47,12 @@ int vips_has_saver(const char *name) {
     return saver != NULL;
   }
   return vips_type_find("VipsForeignSave", name) != 0;
+}
+
+void vips_setenv(const char *name, const char *value) {
+#ifdef _WIN32
+  _putenv_s(name, value);
+#else
+  setenv(name, value, 1);
+#endif
 }

@@ -28,4 +28,9 @@ int vips_has_loader(const char *name);
  */
 int vips_has_saver(const char *name);
 
+/**
+ * vips_setenv sets an environment variable in the C environment.
+ */
+void vips_setenv(const char *name, const char *value);
+
 #endif

@@ -1,8 +1,8 @@
 package engine
 
 import (
+	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/skidoodle/compressd/engine/vips_bridge"
@@ -11,27 +11,22 @@ import (
 // Init starts up libvips. We set concurrency to 1 so that we don't
 // fight with the Go scheduler for thread control.
 func Init(verbose bool) error {
-	// Look for bundled modules in ../lib/vips-modules relative to the executable.
-	exePath, err := os.Executable()
-	if err == nil {
-		libDir := filepath.Join(filepath.Dir(exePath), "lib", "vips-modules")
-		if _, err := os.Stat(libDir); err == nil {
-			// Prepend to module path so our bundled ones are preferred.
-			oldPath := os.Getenv("VIPS_MODULE_PATH")
-			newPath := libDir
-			if oldPath != "" {
-				newPath = libDir + string(os.PathListSeparator) + oldPath
-			}
-			os.Setenv("VIPS_MODULE_PATH", newPath)
-		}
-	}
-
+	// Set debug flags.
 	if verbose {
+		os.Setenv("G_MESSAGES_DEBUG", "all")
+		os.Setenv("VIPS_DEBUG", "1")
+		vips_bridge.SetEnv("G_MESSAGES_DEBUG", "all")
+		vips_bridge.SetEnv("VIPS_DEBUG", "1")
 		vips.LoggingSettings(nil, vips.LogLevelInfo)
 	} else {
 		vips.LoggingSettings(func(domain string, level vips.LogLevel, msg string) {
 			// Mute logs in non-verbose mode.
 		}, vips.LogLevelError)
+	}
+
+	if verbose {
+		fmt.Printf("compressd: info: VIPS_MODULE_PATH is %q\n", os.Getenv("VIPS_MODULE_PATH"))
+		fmt.Printf("compressd: info: LIBHEIF_PLUGIN_PATH is %q\n", os.Getenv("LIBHEIF_PLUGIN_PATH"))
 	}
 
 	return vips.Startup(&vips.Config{

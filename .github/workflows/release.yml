@@ -18,7 +18,16 @@ jobs:
       - name: Install libvips
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips-dev libheif-dev libwebp-dev patchelf
+          sudo apt-get install -y \
+            libvips-dev \
+            libheif-dev \
+            libheif-plugin-aomdec \
+            libheif-plugin-aomenc \
+            libheif-plugin-dav1d \
+            libheif-plugin-libde265 \
+            libheif-plugin-x265 \
+            libwebp-dev \
+            patchelf
 
       - name: Set up Go
         uses: actions/setup-go@v6

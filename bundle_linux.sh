@@ -47,10 +47,21 @@ else
     fi
 fi
 
+SYSTEM_AVIF=$(ldconfig -p | grep libavif.so | head -n 1 | awk -F '=> ' '{print $2}')
+if [ -n "$SYSTEM_AVIF" ] && [ -f "$SYSTEM_AVIF" ]; then
+    echo "Force-queuing system libavif: $SYSTEM_AVIF"
+    echo "$SYSTEM_AVIF" >> "$QUEUE_FILE"
+fi
+
+VIPS_VERSION=$(pkg-config vips --modversion | cut -d. -f1,2)
+MOD_SUBDIR="vips-modules-$VIPS_VERSION"
+
 VIPS_MODULE_DIR=$(pkg-config vips --variable=pluginsdir 2>/dev/null || echo "")
-if [ -z "$VIPS_MODULE_DIR" ]; then
-    VIPS_VERSION=$(pkg-config vips --modversion | cut -d. -f1,2)
-    for dir in "/usr/lib/$(uname -m)-linux-gnu/vips-plugins-$VIPS_VERSION" "/usr/lib/vips-plugins-$VIPS_VERSION"; do
+echo "pkg-config vips pluginsdir: $VIPS_MODULE_DIR"
+if [ -z "$VIPS_MODULE_DIR" ] || [ ! -d "$VIPS_MODULE_DIR" ]; then
+    echo "Checking fallback dirs for vips $VIPS_VERSION..."
+    for dir in "/usr/lib/$(uname -m)-linux-gnu/vips-plugins-$VIPS_VERSION" "/usr/lib/vips-plugins-$VIPS_VERSION" "/usr/lib/$(uname -m)-linux-gnu/$MOD_SUBDIR" "/usr/lib/$MOD_SUBDIR"; do
+        echo "Checking $dir"
         if [ -d "$dir" ]; then
             VIPS_MODULE_DIR="$dir"
             break
@@ -65,9 +76,9 @@ fi
 
 if [ -n "$VIPS_MODULE_DIR" ] && [ -d "$VIPS_MODULE_DIR" ]; then
     echo "Found libvips modules in $VIPS_MODULE_DIR"
-    mkdir -p "$LIB_DIR/vips-modules"
-    cp "$VIPS_MODULE_DIR"/*.so "$LIB_DIR/vips-modules/" 2>/dev/null || true
-    for module in "$LIB_DIR/vips-modules"/*.so; do
+    mkdir -p "$LIB_DIR/$MOD_SUBDIR"
+    cp "$VIPS_MODULE_DIR"/*.so "$LIB_DIR/$MOD_SUBDIR/" 2>/dev/null || true
+    for module in "$LIB_DIR/$MOD_SUBDIR"/*.so; do
         if [ -f "$module" ]; then
             echo "Bundling module: $(basename "$module")"
             echo "$(realpath "$module")" >> "$QUEUE_FILE"
@@ -76,6 +87,37 @@ if [ -n "$VIPS_MODULE_DIR" ] && [ -d "$VIPS_MODULE_DIR" ]; then
     done
 else
     echo "Warning: libvips plugins directory not found. AVIF/HEIF support might be missing if it's a module."
+fi
+
+HEIF_PLUGIN_DIR=""
+for d in \
+    "/usr/lib/$(uname -m)-linux-gnu/libheif/plugins" \
+    "/usr/lib/$(uname -m)-linux-gnu/libheif" \
+    "/usr/lib/libheif/plugins" \
+    "/usr/lib/libheif"; do
+    if [ -d "$d" ] && (ls "$d"/libheif-*.so* "$d"/libheif_*.so* >/dev/null 2>&1); then
+        HEIF_PLUGIN_DIR="$d"
+        break
+    fi
+done
+
+if [ -z "$HEIF_PLUGIN_DIR" ]; then
+    HEIF_PLUGIN_DIR=$(find /usr/lib \( -name "libheif-*.so*" -o -name "libheif_*.so*" \) -print -quit 2>/dev/null | xargs dirname 2>/dev/null || echo "")
+fi
+
+if [ -n "$HEIF_PLUGIN_DIR" ] && [ -d "$HEIF_PLUGIN_DIR" ]; then
+    echo "Found libheif plugins in $HEIF_PLUGIN_DIR"
+    mkdir -p "$LIB_DIR/libheif"
+    cp -v "$HEIF_PLUGIN_DIR"/libheif-*.so* "$HEIF_PLUGIN_DIR"/libheif_*.so* "$LIB_DIR/libheif/" 2>/dev/null || true
+    for plugin in "$LIB_DIR/libheif"/*.so*; do
+        if [ -f "$plugin" ] && [ ! -L "$plugin" ]; then
+            echo "Bundling heif plugin: $(basename "$plugin")"
+            echo "$(realpath "$plugin")" >> "$QUEUE_FILE"
+            patchelf --set-rpath '$ORIGIN/..' --force-rpath "$plugin"
+        fi
+    done
+else
+    echo "Note: libheif plugins directory not found. This is normal if libheif is built without plugins."
 fi
 
 while [ -s "$QUEUE_FILE" ]; do

@@ -77,3 +77,12 @@ func HasSaver(name string) bool {
 	defer C.free(unsafe.Pointer(cName))
 	return int(C.vips_has_saver(cName)) != 0
 }
+
+// SetEnv sets an environment variable in the C environment.
+func SetEnv(name, value string) {
+	cName := C.CString(name)
+	cValue := C.CString(value)
+	defer C.free(unsafe.Pointer(cName))
+	defer C.free(unsafe.Pointer(cValue))
+	C.vips_setenv(cName, cValue)
+}
