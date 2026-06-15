@@ -72,7 +72,7 @@ func main() {
 
 	// Set up the processing pipeline.
 	p := pipeline.NewPipeline(cfg.Jobs, cfg.Format, cfg.Quality, cfg.Extension, store, totalFiles)
-	p.Start(store)
+	p.Start(ctx, store)
 	defer p.Close()
 
 	// Set up signal handling for graceful exits.

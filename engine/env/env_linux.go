@@ -27,14 +27,6 @@ func init() {
 		return
 	}
 
-	// libvips checks system paths like lib/x86_64-linux-gnu. point those back to .
-	for _, archDir := range []string{"x86_64-linux-gnu", "aarch64-linux-gnu", "lib64"} {
-		linkPath := filepath.Join(libDir, archDir)
-		if _, err := os.Lstat(linkPath); err != nil {
-			_ = os.Symlink(".", linkPath)
-		}
-	}
-
 	// find vips modules subdir
 	vipsModPath := libDir
 	if entries, err := os.ReadDir(libDir); err == nil {

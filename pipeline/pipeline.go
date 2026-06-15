@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,7 +60,7 @@ func NewPipeline(workers int, format string, quality int, renameExtension bool, 
 }
 
 // Start kicks off the worker pool and the background database batcher.
-func (p *Pipeline) Start(dber PebbleWriter) {
+func (p *Pipeline) Start(ctx context.Context, dber PebbleWriter) {
 	p.batchWg.Add(1)
 	go p.batcher(dber)
 
@@ -67,7 +68,7 @@ func (p *Pipeline) Start(dber PebbleWriter) {
 
 	for i := 0; i < p.workers; i++ {
 		p.wg.Add(1)
-		go p.worker()
+		go p.worker(ctx)
 	}
 }
 
@@ -96,10 +97,18 @@ func (p *Pipeline) Close() {
 	})
 }
 
-func (p *Pipeline) worker() {
+func (p *Pipeline) worker(ctx context.Context) {
 	defer p.wg.Done()
-	for job := range p.queue {
-		p.executeWithRecovery(job)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case job, ok := <-p.queue:
+			if !ok {
+				return
+			}
+			p.executeWithRecovery(job)
+		}
 	}
 }
 

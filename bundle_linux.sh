@@ -164,4 +164,8 @@ rm "$PROCESSED_FILE" "$QUEUE_FILE"
 echo "Setting RPATH on binary to \$ORIGIN/lib"
 patchelf --set-rpath '$ORIGIN/lib' --force-rpath "$BINARY"
 
+ln -sf . "$LIB_DIR/x86_64-linux-gnu" 2>/dev/null || true
+ln -sf . "$LIB_DIR/aarch64-linux-gnu" 2>/dev/null || true
+ln -sf . "$LIB_DIR/lib64" 2>/dev/null || true
+
 echo "Bundling complete."
