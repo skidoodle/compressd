@@ -51,10 +51,18 @@ func main() {
 	}
 	defer engine.Shutdown()
 
+	support := engine.GetSupport()
+	if cfg.Format == "avif" && !support.AvifSave {
+		logger.LogFatal("", "AVIF output support is not enabled in the current libvips build. Please install libheif/libavif and rebuild, or use --format webp.")
+	}
+	if cfg.Format == "webp" && !support.WebpSave {
+		logger.LogFatal("", "WebP output support is not enabled in the current libvips build. Please install libwebp and rebuild.")
+	}
+
 	// Pre-scan to count files so we can provide an accurate progress bar.
 	var totalFiles int64
 	_ = filepath.WalkDir(cfg.TargetDir, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr == nil && !d.IsDir() && isImage(path) {
+		if walkErr == nil && !d.IsDir() && isImage(path, support) {
 			totalFiles++
 		}
 		return nil
@@ -83,7 +91,7 @@ func main() {
 		default:
 		}
 
-		if d.IsDir() || !isImage(path) {
+		if d.IsDir() || !isImage(path, support) {
 			return nil
 		}
 
@@ -102,11 +110,15 @@ func main() {
 	}
 }
 
-func isImage(path string) bool {
+func isImage(path string, support engine.Support) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".tiff":
+	case ".jpg", ".jpeg", ".png", ".gif", ".tiff":
 		return true
+	case ".webp":
+		return support.WebpLoad
+	case ".avif":
+		return support.AvifLoad
 	}
 	return false
 }

@@ -16,4 +16,16 @@ int vips_save_to_file(VipsImage *image, const char *path);
  */
 char *vips_get_last_error();
 
+/**
+ * vips_has_loader checks if a loader exists for the given nickname (e.g.
+ * "avifload").
+ */
+int vips_has_loader(const char *name);
+
+/**
+ * vips_has_saver checks if a saver exists for the given nickname (e.g.
+ * "avifsave").
+ */
+int vips_has_saver(const char *name);
+
 #endif

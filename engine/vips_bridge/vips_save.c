@@ -19,3 +19,33 @@ char *vips_get_last_error() {
   vips_error_clear();
   return res;
 }
+
+int vips_has_loader(const char *name) {
+  if (strcmp(name, "avif") == 0) {
+    return vips_type_find("VipsForeignLoad", "avifload") != 0 ||
+           vips_type_find("VipsForeignLoad", "heifload") != 0;
+  }
+  if (strcmp(name, "webp") == 0) {
+    return vips_type_find("VipsForeignLoad", "webpload") != 0;
+  }
+  return vips_type_find("VipsForeignLoad", name) != 0;
+}
+
+int vips_has_saver(const char *name) {
+  if (strcmp(name, "avif") == 0) {
+    if (vips_type_find("VipsForeignSave", "avifsave") != 0 ||
+        vips_type_find("VipsForeignSave", "heifsave") != 0) {
+      return 1;
+    }
+    const char *saver = vips_foreign_find_save("test.avif");
+    return saver != NULL;
+  }
+  if (strcmp(name, "webp") == 0) {
+    if (vips_type_find("VipsForeignSave", "webpsave") != 0) {
+      return 1;
+    }
+    const char *saver = vips_foreign_find_save("test.webp");
+    return saver != NULL;
+  }
+  return vips_type_find("VipsForeignSave", name) != 0;
+}

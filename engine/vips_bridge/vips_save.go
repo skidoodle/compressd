@@ -63,3 +63,17 @@ func SaveToVipsFile(img *vips.ImageRef, tmpPath string, quality int) error {
 
 	return nil
 }
+
+// HasLoader returns true if libvips has a loader for the given format nickname.
+func HasLoader(name string) bool {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	return int(C.vips_has_loader(cName)) != 0
+}
+
+// HasSaver returns true if libvips has a saver for the given format nickname.
+func HasSaver(name string) bool {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	return int(C.vips_has_saver(cName)) != 0
+}
