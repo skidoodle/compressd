@@ -9,20 +9,26 @@ import "C"
 import (
 	"fmt"
 	"reflect"
+	"runtime"
+	"sync"
 	"unsafe"
 
 	"github.com/davidbyttow/govips/v2/vips"
 )
 
-// SaveToVipsFile writes an image directly to disk using libvips's native savers.
-// This bypasses the Go heap and avoids issues with missing buffer-based savers.
+// libvips uses a global error buffer, so we use a mutex to make sure
+// concurrent saves don't overwrite each other's error messages.
+var vipsMu sync.Mutex
+
+// SaveToVipsFile writes the image directly to disk. This is much more memory
+// efficient and handles some AVIF builds where buffer exports are broken.
 func SaveToVipsFile(img *vips.ImageRef, tmpPath string, quality int) error {
-	// The [Q=quality] suffix is a libvips convention to pass options to the saver.
 	vipsPath := fmt.Sprintf("%s[Q=%d]", tmpPath, quality)
 	cPath := C.CString(vipsPath)
 	defer C.free(unsafe.Pointer(cPath))
 
-	// We use reflection to grab the unexported C pointer from the govips ImageRef.
+	// We have to use reflection to get the underlying C pointer
+	// since the govips package doesn't export it.
 	imgVal := reflect.ValueOf(img).Elem()
 	imgPtrField := imgVal.FieldByName("image")
 	if !imgPtrField.IsValid() {
@@ -31,13 +37,26 @@ func SaveToVipsFile(img *vips.ImageRef, tmpPath string, quality int) error {
 
 	imgPtr := (*C.VipsImage)(unsafe.Pointer(imgPtrField.Pointer()))
 
-	if err := C.vips_save_to_file(imgPtr, cPath); err != 0 {
-		cErr := C.vips_get_last_error()
-		defer C.free(unsafe.Pointer(cErr))
+	vipsMu.Lock()
+	ret := C.vips_save_to_file(imgPtr, cPath)
 
-		msg := "unknown libvips error"
+	var msg string
+	if ret != 0 {
+		cErr := C.vips_get_last_error()
 		if cErr != nil {
 			msg = C.GoString(cErr)
+			C.free(unsafe.Pointer(cErr))
+		}
+	}
+	vipsMu.Unlock()
+
+	// Make sure the Go GC doesn't collect 'img'
+	// while we're still running that C function.
+	runtime.KeepAlive(img)
+
+	if ret != 0 {
+		if msg == "" {
+			msg = "unknown libvips error"
 		}
 		return fmt.Errorf("libvips error: %s", msg)
 	}
