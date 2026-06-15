@@ -32,6 +32,7 @@ func parseFlags() (*Config, error) {
 	var eFlag, extensionFlag bool
 	var cFlag, cacheFlag string
 	var vFlag, verboseFlag bool
+	var versionFlag bool
 
 	fs := flag.NewFlagSet("compressd", flag.ContinueOnError)
 	fs.Usage = func() {
@@ -42,6 +43,7 @@ func parseFlags() (*Config, error) {
 		fmt.Fprintf(os.Stderr, "  -e, --extension       Rename the file extension to match the output format\n")
 		fmt.Fprintf(os.Stderr, "  -c, --cache <path>    Where to store the persistent cache index\n")
 		fmt.Fprintf(os.Stderr, "  -v, --verbose         Enable detailed logging\n")
+		fmt.Fprintf(os.Stderr, "      --version         Print version information\n")
 	}
 
 	fs.IntVar(&jFlag, "j", 0, "")
@@ -56,6 +58,7 @@ func parseFlags() (*Config, error) {
 	fs.StringVar(&cacheFlag, "cache", "", "")
 	fs.BoolVar(&vFlag, "v", false, "")
 	fs.BoolVar(&verboseFlag, "verbose", false, "")
+	fs.BoolVar(&versionFlag, "version", false, "")
 
 	if len(os.Args) == 1 {
 		fs.Usage()
@@ -67,6 +70,11 @@ func parseFlags() (*Config, error) {
 			os.Exit(0)
 		}
 		return nil, err
+	}
+
+	if versionFlag {
+		fmt.Println(Version)
+		os.Exit(0)
 	}
 
 	cfg := &Config{}

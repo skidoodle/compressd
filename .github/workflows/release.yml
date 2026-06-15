@@ -29,7 +29,7 @@ jobs:
       - name: Build
         run: |
           export CGO_ENABLED=1
-          go build -v -ldflags="-s -w" -o compressd .
+          go build -v -ldflags="-s -w -X main.Version=${GITHUB_REF_NAME}" -o compressd .
           chmod +x bundle_linux.sh
           ./bundle_linux.sh compressd
           tar -czvf compressd-linux-amd64.tar.gz compressd lib/
@@ -102,7 +102,7 @@ jobs:
           $env:CGO_CFLAGS = "-I$env:VIPS_UNIX/include"
           $env:CGO_LDFLAGS = "-L$env:VIPS_UNIX/lib"
 
-          go build -v -ldflags="-s -w" -o compressd.exe .
+          go build -v -ldflags="-s -w -X main.Version=$env:GITHUB_REF_NAME" -o compressd.exe .
           if (!(Test-Path "compressd.exe")) {
             throw "compressd.exe not found after build"
           }

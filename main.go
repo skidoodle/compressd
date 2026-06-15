@@ -14,11 +14,19 @@ import (
 	"github.com/skidoodle/compressd/pipeline"
 )
 
+var (
+	Version = "dev"
+)
+
 func main() {
 	cfg, err := parseFlags()
 	if err != nil {
 		logger.LogErr("", fmt.Sprintf("invalid configuration: %v", err))
 		os.Exit(1)
+	}
+
+	if cfg.Verbose {
+		logger.LogInfo("", fmt.Sprintf("compressd %s startup", Version))
 	}
 
 	// Use a cancellable context to allow for a clean shutdown on signals.
