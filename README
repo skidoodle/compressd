@@ -1,7 +1,6 @@
 COMPRESSD
 =========
 
-DESCRIPTION
 A simple tool I built to help me deal with massive piles of images
 taking up way too much space. It scans through your folders, finds your images,
 and converts them into modern formats like WebP or AVIF.
@@ -43,6 +42,7 @@ STANDARD FLAGS
                         to runtime.NumCPU().
 -f, --format <string> Target execution format: webp, avif (default: webp).
 -q, --quality <int>   Compression factor. Value range: [1-100] (default: 75).
+-e, --extension       Rename the file extension to match the output format.
 -c, --cache <string>  Absolute path targeting Pebble state index persistence
                         (default: $HOME/.cache/compressd).
 -v, --verbose         Toggles verbose diagnostic text output layers.

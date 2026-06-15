@@ -53,7 +53,7 @@ func main() {
 	})
 
 	// Set up the processing pipeline.
-	p := pipeline.NewPipeline(cfg.Jobs, cfg.Format, cfg.Quality, store, totalFiles)
+	p := pipeline.NewPipeline(cfg.Jobs, cfg.Format, cfg.Quality, cfg.Extension, store, totalFiles)
 	p.Start(store)
 	defer p.Close()
 

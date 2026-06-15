@@ -59,6 +59,10 @@ func (s *Store) Set(key, value []byte) error {
 	return s.db.Set(key, value, pebble.Sync)
 }
 
+func (s *Store) Delete(key []byte) error {
+	return s.db.Delete(key, pebble.Sync)
+}
+
 func (s *Store) NewBatch() *pebble.Batch {
 	return s.db.NewBatch()
 }

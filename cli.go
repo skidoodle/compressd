@@ -18,6 +18,7 @@ type Config struct {
 	Jobs      int
 	Format    string
 	Quality   int
+	Extension bool
 	CacheDir  string
 	Verbose   bool
 	TargetDir string
@@ -28,6 +29,7 @@ func parseFlags() (*Config, error) {
 	var jFlag, jobsFlag int
 	var fFlag, formatFlag string
 	var qFlag, qualityFlag int
+	var eFlag, extensionFlag bool
 	var cFlag, cacheFlag string
 	var vFlag, verboseFlag bool
 
@@ -37,6 +39,7 @@ func parseFlags() (*Config, error) {
 		fmt.Fprintf(os.Stderr, "  -j, --jobs <int>      Number of parallel processing tasks (default: %d)\n", runtime.NumCPU())
 		fmt.Fprintf(os.Stderr, "  -f, --format <str>    Output format: webp or avif (default: \"webp\")\n")
 		fmt.Fprintf(os.Stderr, "  -q, --quality <int>   Image quality [1-100] (default: 75)\n")
+		fmt.Fprintf(os.Stderr, "  -e, --extension       Rename the file extension to match the output format\n")
 		fmt.Fprintf(os.Stderr, "  -c, --cache <path>    Where to store the persistent cache index\n")
 		fmt.Fprintf(os.Stderr, "  -v, --verbose         Enable detailed logging\n")
 	}
@@ -47,6 +50,8 @@ func parseFlags() (*Config, error) {
 	fs.StringVar(&formatFlag, "format", "webp", "")
 	fs.IntVar(&qFlag, "q", 75, "")
 	fs.IntVar(&qualityFlag, "quality", 75, "")
+	fs.BoolVar(&eFlag, "e", false, "")
+	fs.BoolVar(&extensionFlag, "extension", false, "")
 	fs.StringVar(&cFlag, "c", "", "")
 	fs.StringVar(&cacheFlag, "cache", "", "")
 	fs.BoolVar(&vFlag, "v", false, "")
@@ -94,6 +99,8 @@ func parseFlags() (*Config, error) {
 	if cfg.Quality < 1 || cfg.Quality > 100 {
 		return nil, fmt.Errorf("invalid quality: %d (must be [1-100])", cfg.Quality)
 	}
+
+	cfg.Extension = eFlag || extensionFlag
 
 	// Set up the cache directory. Defaults to ~/.cache/compressd if not provided.
 	var rawCache string

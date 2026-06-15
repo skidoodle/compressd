@@ -28,31 +28,33 @@ type Update struct {
 
 // Pipeline coordinates the entire flow: finding files, processing them, and updating the cache.
 type Pipeline struct {
-	workers    int
-	queue      chan Job
-	updateCh   chan Update
-	wg         sync.WaitGroup
-	batchWg    sync.WaitGroup
-	format     string
-	quality    int
-	store      *cache.Store
-	closeOnce  sync.Once
-	totalFiles int64
-	processed  int64
-	activeMu   sync.Mutex
-	activeFile string
-	errors     int64
+	workers       int
+	queue         chan Job
+	updateCh      chan Update
+	wg            sync.WaitGroup
+	batchWg       sync.WaitGroup
+	format        string
+	quality       int
+	keepExtension bool
+	store         *cache.Store
+	closeOnce     sync.Once
+	totalFiles    int64
+	processed     int64
+	activeMu      sync.Mutex
+	activeFile    string
+	errors        int64
 }
 
-func NewPipeline(workers int, format string, quality int, store *cache.Store, totalFiles int64) *Pipeline {
+func NewPipeline(workers int, format string, quality int, keepExtension bool, store *cache.Store, totalFiles int64) *Pipeline {
 	return &Pipeline{
-		workers:    workers,
-		queue:      make(chan Job, workers*2),
-		updateCh:   make(chan Update, workers*4),
-		format:     format,
-		quality:    quality,
-		store:      store,
-		totalFiles: totalFiles,
+		workers:       workers,
+		queue:         make(chan Job, workers*2),
+		updateCh:      make(chan Update, workers*4),
+		format:        format,
+		quality:       quality,
+		keepExtension: keepExtension,
+		store:         store,
+		totalFiles:    totalFiles,
 	}
 }
 
@@ -220,19 +222,35 @@ func (p *Pipeline) executeWithRecovery(job Job) {
 		return
 	}
 
+	// Determine the final path. If keepExtension is true, rename the file.
+	finalPath := job.Path
+	if p.keepExtension {
+		ext := filepath.Ext(job.Path)
+		newPath := job.Path[:len(job.Path)-len(ext)] + "." + p.format
+		if newPath != job.Path {
+			if err := os.Rename(job.Path, newPath); err != nil {
+				p.logError(job.Path, fmt.Errorf("failed to rename to new extension: %v", err))
+				return
+			}
+			// Delete old cache entry if the path changed.
+			_ = p.store.Delete([]byte(job.Path))
+			finalPath = newPath
+		}
+	}
+
 	// Get the new file stats so we can update the cache accurately.
-	newFi, err := os.Stat(job.Path)
+	newFi, err := os.Stat(finalPath)
 	if err != nil {
-		p.logError(job.Path, fmt.Errorf("failed to stat processed file: %v", err))
+		p.logError(finalPath, fmt.Errorf("failed to stat processed file: %v", err))
 		return
 	}
 
 	// Send the metadata update to the background batcher.
 	p.updateCh <- Update{
-		Path: job.Path,
+		Path: finalPath,
 		Size: newFi.Size(),
 		Time: newFi.ModTime().Unix(),
 	}
 
-	p.printCompleted(job.Path)
+	p.printCompleted(finalPath)
 }
