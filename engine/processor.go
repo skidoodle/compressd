@@ -22,9 +22,7 @@ func ProcessImage(srcPath string, targetPath string, format string, quality int)
 	height := img.Height()
 
 	format = strings.ToLower(format)
-	if strings.HasPrefix(format, ".") {
-		format = format[1:]
-	}
+	format = strings.TrimPrefix(format, ".")
 
 	switch format {
 	case "webp":
