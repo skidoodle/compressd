@@ -28,33 +28,33 @@ type Update struct {
 
 // Pipeline coordinates the entire flow: finding files, processing them, and updating the cache.
 type Pipeline struct {
-	workers       int
-	queue         chan Job
-	updateCh      chan Update
-	wg            sync.WaitGroup
-	batchWg       sync.WaitGroup
-	format        string
-	quality       int
-	keepExtension bool
-	store         *cache.Store
-	closeOnce     sync.Once
-	totalFiles    int64
-	processed     int64
-	activeMu      sync.Mutex
-	activeFile    string
-	errors        int64
+	workers         int
+	queue           chan Job
+	updateCh        chan Update
+	wg              sync.WaitGroup
+	batchWg         sync.WaitGroup
+	format          string
+	quality         int
+	renameExtension bool
+	store           *cache.Store
+	closeOnce       sync.Once
+	totalFiles      int64
+	processed       int64
+	activeMu        sync.Mutex
+	activeFile      string
+	errors          int64
 }
 
-func NewPipeline(workers int, format string, quality int, keepExtension bool, store *cache.Store, totalFiles int64) *Pipeline {
+func NewPipeline(workers int, format string, quality int, renameExtension bool, store *cache.Store, totalFiles int64) *Pipeline {
 	return &Pipeline{
-		workers:       workers,
-		queue:         make(chan Job, workers*2),
-		updateCh:      make(chan Update, workers*4),
-		format:        format,
-		quality:       quality,
-		keepExtension: keepExtension,
-		store:         store,
-		totalFiles:    totalFiles,
+		workers:         workers,
+		queue:           make(chan Job, workers*2),
+		updateCh:        make(chan Update, workers*4),
+		format:          format,
+		quality:         quality,
+		renameExtension: renameExtension,
+		store:           store,
+		totalFiles:      totalFiles,
 	}
 }
 
@@ -223,13 +223,13 @@ func (p *Pipeline) executeWithRecovery(job Job) {
 
 	// Determine the target path.
 	targetPath := job.Path
-	if p.keepExtension {
+	if p.renameExtension {
 		ext := filepath.Ext(job.Path)
 		targetPath = job.Path[:len(job.Path)-len(ext)] + "." + p.format
 	}
 
 	// Process the image.
-	if err := engine.ProcessImage(job.Path, targetPath, p.quality); err != nil {
+	if err := engine.ProcessImage(job.Path, targetPath, p.format, p.quality); err != nil {
 		p.logError(job.Path, err)
 		return
 	}

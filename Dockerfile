@@ -19,7 +19,6 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /app
 
-# Copy source code
 COPY . .
 
 RUN export CGO_ENABLED=1 && \

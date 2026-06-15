@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/davidbyttow/govips/v2/vips"
@@ -12,7 +11,7 @@ import (
 
 // ProcessImage loads, encodes, and saves the image to the target path.
 // It uses a temporary file and renames it at the end to ensure the update is atomic.
-func ProcessImage(srcPath string, targetPath string, quality int) error {
+func ProcessImage(srcPath string, targetPath string, format string, quality int) error {
 	img, err := vips.NewImageFromFile(srcPath)
 	if err != nil {
 		return fmt.Errorf("failed to load image: %w", err)
@@ -22,10 +21,9 @@ func ProcessImage(srcPath string, targetPath string, quality int) error {
 	width := img.Width()
 	height := img.Height()
 
-	// Extract the format from the target path extension.
-	format := strings.ToLower(filepath.Ext(targetPath))
-	if format != "" {
-		format = format[1:] // remove the dot
+	format = strings.ToLower(format)
+	if strings.HasPrefix(format, ".") {
+		format = format[1:]
 	}
 
 	switch format {

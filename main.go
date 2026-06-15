@@ -113,7 +113,7 @@ func main() {
 func isImage(path string, support engine.Support) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".tiff":
+	case ".jpg", ".jpeg", ".png", ".gif", ".tiff", ".bmp", ".heic", ".heif":
 		return true
 	case ".webp":
 		return support.WebpLoad

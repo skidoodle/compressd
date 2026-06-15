@@ -30,7 +30,7 @@ func TestProcessImage(t *testing.T) {
 
 	// Test WebP conversion.
 	webpFile := filepath.Join(tempDir, "test.webp")
-	if err := ProcessImage(tempFile, webpFile, 75); err != nil {
+	if err := ProcessImage(tempFile, webpFile, "webp", 75); err != nil {
 		t.Fatalf("ProcessImage webp failed: %v", err)
 	}
 
@@ -51,7 +51,7 @@ func TestProcessImage(t *testing.T) {
 		}
 
 		avifFile := filepath.Join(tempDir, "test2.avif")
-		if err := ProcessImage(tempFile2, avifFile, 75); err != nil {
+		if err := ProcessImage(tempFile2, avifFile, "avif", 75); err != nil {
 			t.Fatalf("ProcessImage avif failed: %v", err)
 		}
 
