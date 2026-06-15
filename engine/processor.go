@@ -3,6 +3,8 @@ package engine
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/skidoodle/compressd/engine/vips_bridge"
@@ -10,8 +12,8 @@ import (
 
 // ProcessImage loads, encodes, and saves the image to the target path.
 // It uses a temporary file and renames it at the end to ensure the update is atomic.
-func ProcessImage(path string, format string, quality int) error {
-	img, err := vips.NewImageFromFile(path)
+func ProcessImage(srcPath string, targetPath string, quality int) error {
+	img, err := vips.NewImageFromFile(srcPath)
 	if err != nil {
 		return fmt.Errorf("failed to load image: %w", err)
 	}
@@ -19,6 +21,12 @@ func ProcessImage(path string, format string, quality int) error {
 
 	width := img.Width()
 	height := img.Height()
+
+	// Extract the format from the target path extension.
+	format := strings.ToLower(filepath.Ext(targetPath))
+	if format != "" {
+		format = format[1:] // remove the dot
+	}
 
 	switch format {
 	case "webp":
@@ -36,7 +44,7 @@ func ProcessImage(path string, format string, quality int) error {
 	}
 
 	// Including the format in the extension helps libvips pick the right saver automatically.
-	tmpPath := fmt.Sprintf("%s.tmp.%s", path, format)
+	tmpPath := fmt.Sprintf("%s.tmp.%s", targetPath, format)
 
 	// Use our C bridge to save the file. This avoids bringing the heavy image data
 	// into the Go heap and works around some AVIF buffer export bugs in libvips.
@@ -45,7 +53,7 @@ func ProcessImage(path string, format string, quality int) error {
 		return err
 	}
 
-	if err := os.Rename(tmpPath, path); err != nil {
+	if err := os.Rename(tmpPath, targetPath); err != nil {
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("failed to replace file: %w", err)
 	}

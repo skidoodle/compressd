@@ -29,11 +29,12 @@ func TestProcessImage(t *testing.T) {
 	}
 
 	// Test WebP conversion.
-	if err := ProcessImage(tempFile, "webp", 75); err != nil {
+	webpFile := filepath.Join(tempDir, "test.webp")
+	if err := ProcessImage(tempFile, webpFile, 75); err != nil {
 		t.Fatalf("ProcessImage webp failed: %v", err)
 	}
 
-	fi, err := os.Stat(tempFile)
+	fi, err := os.Stat(webpFile)
 	if err != nil {
 		t.Fatalf("failed to stat processed file: %v", err)
 	}
@@ -47,11 +48,12 @@ func TestProcessImage(t *testing.T) {
 		t.Fatalf("failed to write test GIF 2: %v", err)
 	}
 
-	if err := ProcessImage(tempFile2, "avif", 75); err != nil {
+	avifFile := filepath.Join(tempDir, "test2.avif")
+	if err := ProcessImage(tempFile2, avifFile, 75); err != nil {
 		t.Fatalf("ProcessImage avif failed: %v", err)
 	}
 
-	fi2, err := os.Stat(tempFile2)
+	fi2, err := os.Stat(avifFile)
 	if err != nil {
 		t.Fatalf("failed to stat processed file 2: %v", err)
 	}

@@ -73,6 +73,11 @@ func (p *Pipeline) Start(dber PebbleWriter) {
 
 // Submit adds a new job to the processing queue.
 func (p *Pipeline) Submit(job Job) {
+	// We use a recovery block to catch any race conditions
+	// where main tries to submit while the pipeline is closing.
+	defer func() {
+		_ = recover()
+	}()
 	p.queue <- job
 }
 
@@ -216,41 +221,40 @@ func (p *Pipeline) executeWithRecovery(job Job) {
 		}
 	}
 
-	// Process the image. This writes to a temp file and renames it.
-	if err := engine.ProcessImage(job.Path, p.format, p.quality); err != nil {
+	// Determine the target path.
+	targetPath := job.Path
+	if p.keepExtension {
+		ext := filepath.Ext(job.Path)
+		targetPath = job.Path[:len(job.Path)-len(ext)] + "." + p.format
+	}
+
+	// Process the image.
+	if err := engine.ProcessImage(job.Path, targetPath, p.quality); err != nil {
 		p.logError(job.Path, err)
 		return
 	}
 
-	// Determine the final path. If keepExtension is true, rename the file.
-	finalPath := job.Path
-	if p.keepExtension {
-		ext := filepath.Ext(job.Path)
-		newPath := job.Path[:len(job.Path)-len(ext)] + "." + p.format
-		if newPath != job.Path {
-			if err := os.Rename(job.Path, newPath); err != nil {
-				p.logError(job.Path, fmt.Errorf("failed to rename to new extension: %v", err))
-				return
-			}
-			// Delete old cache entry if the path changed.
-			_ = p.store.Delete([]byte(job.Path))
-			finalPath = newPath
+	// If we changed the extension, we need to clean up the original file and cache.
+	if targetPath != job.Path {
+		if err := os.Remove(job.Path); err != nil {
+			p.logWarning(job.Path, fmt.Sprintf("failed to remove original file after conversion: %v", err))
 		}
+		_ = p.store.Delete([]byte(job.Path))
 	}
 
 	// Get the new file stats so we can update the cache accurately.
-	newFi, err := os.Stat(finalPath)
+	newFi, err := os.Stat(targetPath)
 	if err != nil {
-		p.logError(finalPath, fmt.Errorf("failed to stat processed file: %v", err))
+		p.logError(targetPath, fmt.Errorf("failed to stat processed file: %v", err))
 		return
 	}
 
 	// Send the metadata update to the background batcher.
 	p.updateCh <- Update{
-		Path: finalPath,
+		Path: targetPath,
 		Size: newFi.Size(),
 		Time: newFi.ModTime().Unix(),
 	}
 
-	p.printCompleted(finalPath)
+	p.printCompleted(targetPath)
 }
