@@ -114,7 +114,7 @@ func sanitizeDir(dir string) error {
 		}
 		if !d.IsDir() {
 			name := d.Name()
-			if strings.HasSuffix(name, ".webp.tmp") || strings.HasSuffix(name, ".avif.tmp") {
+			if strings.Contains(name, ".tmp.webp") || strings.Contains(name, ".tmp.avif") {
 				if err := os.Remove(path); err != nil {
 					logger.LogWarn(path, fmt.Sprintf("failed to prune legacy temp file: %v", err))
 				} else {
