@@ -32,17 +32,17 @@ If you've got Go and `libvips` installed on your system, you can just run:
 
 $ go install github.com/skidoodle/compressd@latest
 
-USAGE
-==========================
+HOW TO USE
+==========
 
-$ compressd [OPTIONS] <TARGET_DIRECTORY>
+$ compressd
+Usage: compressd [OPTIONS] <TARGET_DIRECTORY>
 
-STANDARD FLAGS
--j, --jobs <int>      Limits concurrent processing tasks. Defaults strictly
-                        to runtime.NumCPU().
--f, --format <string> Target execution format: webp, avif (default: webp).
--q, --quality <int>   Compression factor. Value range: [1-100] (default: 75).
--e, --extension       Rename the file extension to match the output format.
--c, --cache <string>  Absolute path targeting Pebble state index persistence
-                        (default: $HOME/.cache/compressd).
--v, --verbose         Toggles verbose diagnostic text output layers.
+OPTIONS:
+  -j, --jobs <int>      Number of parallel processing tasks (default: 12)
+  -f, --format <str>    Output format: webp or avif (default: "webp")
+  -q, --quality <int>   Image quality [1-100] (default: 75)
+  -e, --extension       Rename the file extension to match the output format
+  -c, --cache <path>    Where to store the persistent cache index
+  -v, --verbose         Enable detailed logging
+      --version         Print version information
