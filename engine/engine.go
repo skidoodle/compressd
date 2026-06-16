@@ -11,6 +11,9 @@ import (
 // Init starts up libvips. We set concurrency to 1 so that we don't
 // fight with the Go scheduler for thread control.
 func Init(verbose bool) error {
+	// Disable mmap to avoid issues with unstable filesystems.
+	os.Setenv("VIPS_DISCARD_MMAP", "1")
+
 	// Set debug flags.
 	if verbose {
 		os.Setenv("G_MESSAGES_DEBUG", "all")
