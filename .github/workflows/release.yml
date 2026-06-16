@@ -15,33 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install libvips
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libvips-dev \
-            libheif-dev \
-            libheif-plugin-aomdec \
-            libheif-plugin-aomenc \
-            libheif-plugin-dav1d \
-            libheif-plugin-libde265 \
-            libheif-plugin-x265 \
-            libwebp-dev \
-            patchelf
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "1.26.4"
-          cache: true
-
       - name: Build
         run: |
-          export CGO_ENABLED=1
-          go build -v -ldflags="-s -w -X main.Version=${GITHUB_REF_NAME}" -o compressd .
-          chmod +x bundle_linux.sh
-          ./bundle_linux.sh compressd
-          tar -czvf compressd-linux-amd64.tar.gz compressd lib/
+          docker build \
+            --target builder \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            -t compressd-linux-release .
+
+          container_id="$(docker create compressd-linux-release)"
+          trap 'docker rm -f "${container_id}" >/dev/null 2>&1 || true' EXIT
+
+          mkdir -p dist/linux
+          docker cp "${container_id}:/app/compressd" dist/linux/compressd
+          docker cp "${container_id}:/app/lib" dist/linux/lib
+
+          docker rm "${container_id}"
+          trap - EXIT
+
+          tar -C dist/linux -czvf compressd-linux-amd64.tar.gz compressd lib/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
@@ -120,6 +111,14 @@ jobs:
 
           copy compressd.exe dist\
           copy "$env:VIPS_DIR\bin\*.dll" dist\
+
+          $vipsShortVersion = ($vipsVersion -split '\.')[0..1] -join '.'
+          $modulesDir = "$env:VIPS_DIR\lib\vips-modules-$vipsShortVersion"
+
+          if (Test-Path $modulesDir) {
+            New-Item -ItemType Directory -Force dist\lib
+            Copy-Item -Recurse $modulesDir dist\lib\
+          }
 
           (Get-Content compressd.iss) -replace 'AppVersion=1.0.0', "AppVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" | Set-Content compressd.iss
 
