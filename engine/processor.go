@@ -12,7 +12,12 @@ import (
 // ProcessImage loads, encodes, and saves the image to the target path.
 // It uses a temporary file and renames it at the end to ensure the update is atomic.
 func ProcessImage(srcPath string, targetPath string, format string, quality int) error {
-	img, err := vips.NewImageFromFile(srcPath)
+	buf, err := os.ReadFile(srcPath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	img, err := vips.NewImageFromBuffer(buf)
 	if err != nil {
 		return fmt.Errorf("failed to load image: %w", err)
 	}
